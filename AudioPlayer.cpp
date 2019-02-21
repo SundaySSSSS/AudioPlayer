@@ -15,7 +15,8 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     qDebug() << "audio callback" << len;
 }
 
-void  fill_audio(void *udata,Uint8 *stream,int len){
+void fill_audio(void *udata ,Uint8 *stream,int len)
+{
     //SDL 2.0
     SDL_memset(stream, 0, len);
     if(audio_len==0)		/*  Only  play  if  we  have  data  left  */
@@ -33,6 +34,43 @@ AudioPlayer::AudioPlayer()
 }
 
 
+APRet AudioPlayer::init(AudioPlayerNS::AudioInfo info)
+{
+    if (SDL_Init(SDL_INIT_AUDIO))
+    {
+        return AP_SDL_INIT_ERR;
+    }
+    else
+    {
+        SDL_AudioSpec audioSpec;
+        audioSpec.freq = info.fs;
+        audioSpec.format = getAudioFormatFromDataFormat(info.format);
+        audioSpec.channels = info.channels;
+        audioSpec.silence = 0;
+        audioSpec.samples = 1024;
+        audioSpec.callback = audio_callback;
+        if (SDL_OpenAudio(&audioSpec, NULL) < 0)
+        {
+            return AP_SDL_OPEN_ERR;
+        }
+        else
+        {
+            return AP_OK;
+        }
+    }
+}
+
+APRet AudioPlayer::play()
+{
+    SDL_PauseAudio(0);
+    return AP_OK;
+}
+
+APRet AudioPlayer::pushData(const char *data, int32 len)
+{
+    m_dataQueue.push(data, len);
+    return AP_OK;
+}
 
 int AudioPlayer::playWav(const char *filePath)
 {
@@ -50,7 +88,7 @@ int AudioPlayer::playWav(const char *filePath)
     wanted_spec.samples = 1024;
     wanted_spec.callback = fill_audio;
 
-    if (SDL_OpenAudio(&wanted_spec, NULL)<0)
+    if (SDL_OpenAudio(&wanted_spec, NULL) < 0)
     {
         qDebug() << QString().sprintf("can't open audio.\n");
         return -1;
@@ -62,7 +100,7 @@ int AudioPlayer::playWav(const char *filePath)
         qDebug() << QString().sprintf("cannot open this file\n");
         return -1;
     }
-    //For YUV420P
+
     int pcm_buffer_size = 64 * 1024;
     char *pcm_buffer=(char *)malloc(pcm_buffer_size);
     int data_count=0;
@@ -121,41 +159,5 @@ SDL_AudioFormat AudioPlayer::getAudioFormatFromDataFormat(DataFormat dataFormat)
     return sdl_audioFormat;
 }
 
-APRet AudioPlayer::init(AudioPlayerNS::AudioInfo info)
-{
-    if (SDL_Init(SDL_INIT_AUDIO))
-    {
-        return AP_SDL_INIT_ERR;
-    }
-    else
-    {
-        SDL_AudioSpec audioSpec;
-        audioSpec.freq = info.fs;
-        audioSpec.format = getAudioFormatFromDataFormat(info.format);
-        audioSpec.channels = info.channels;
-        audioSpec.silence = 0;
-        audioSpec.samples = 1024;
-        audioSpec.callback = audio_callback;
-        if (SDL_OpenAudio(&audioSpec, NULL) < 0)
-        {
-            return AP_SDL_OPEN_ERR;
-        }
-        else
-        {
-            return AP_OK;
-        }
-    }
-}
-
-APRet AudioPlayer::play()
-{
-    SDL_PauseAudio(0);
-    return AP_OK;
-}
-
-APRet AudioPlayer::pushData(char *data, int32 len)
-{
-
-}
 
 }

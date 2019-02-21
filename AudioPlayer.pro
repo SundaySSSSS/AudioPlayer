@@ -17,8 +17,7 @@ SOURCES += main.cpp\
     AudioPlayer.cpp
 
 HEADERS  += widget.h \
-    AudioPlayer.h \
-    CycleBuffer.h
+    AudioPlayer.h
 
 FORMS    += widget.ui
 
