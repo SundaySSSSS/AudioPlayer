@@ -2,11 +2,64 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QFile>
+#include <QThread>
+#include <QDebug>
 #include "AudioPlayer.h"
 
 namespace Ui {
 class Widget;
 }
+
+class ReadFileThread: public QThread
+{
+    Q_OBJECT
+public:
+    void setFilePath(QString filePath) { m_filePath = filePath; }
+    virtual void run()
+    {
+        QFile file(m_filePath);
+        if (file.open(QFile::ReadOnly))
+        {
+            AudioPlayerNS::AudioInfo audioInfo;
+            audioInfo.fs = 44100;
+            audioInfo.format = AudioPlayerNS::FORMAT_INT16;
+            audioInfo.channels = 2;
+            AudioPlayerNS::AudioPlayer ap;
+            ap.init(audioInfo);
+            ap.play();
+            //逐段读取文件, 送入音频播放对象中
+            int32 dataLen = 64 * 1024;
+            char* pData = new char[dataLen];
+            while (file.atEnd())
+            {
+                int realReadLen = file.read(pData, dataLen);
+                if (realReadLen > 0)
+                {
+                    bool isPushed = false;
+                    while (isPushed == false)
+                    {
+                        ap.pushData(pData, realReadLen);
+                        msleep(500);
+                    }
+                }
+            }
+
+            delete[] pData;
+            pData = NULL;
+
+            file.close();
+        }
+        else
+        {
+            qDebug() << "open file error";
+        }
+        return;
+    }
+
+private:
+    QString m_filePath;
+};
 
 class Widget : public QWidget
 {

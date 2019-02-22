@@ -68,8 +68,14 @@ APRet AudioPlayer::play()
 
 APRet AudioPlayer::pushData(const char *data, int32 len)
 {
-    m_dataQueue.push(data, len);
-    return AP_OK;
+    if (m_dataQueue.push(data, len))
+    {
+        return AP_OK;
+    }
+    else
+    {
+        return AP_BUFFER_FULL;
+    }
 }
 
 int AudioPlayer::playWav(const char *filePath)
@@ -94,9 +100,9 @@ int AudioPlayer::playWav(const char *filePath)
         return -1;
     }
 
-    //FILE *fp=fopen("../NocturneNo2inEflat_44.1k_s16le.pcm","rb+");
     FILE *fp = fopen(filePath, "rb+");
-    if(fp==NULL){
+    if(fp==NULL)
+    {
         qDebug() << QString().sprintf("cannot open this file\n");
         return -1;
     }
