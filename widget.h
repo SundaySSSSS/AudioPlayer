@@ -15,9 +15,12 @@ class ReadFileThread: public QThread
 {
     Q_OBJECT
 public:
+    ReadFileThread() { m_isRunning = false; }
     void setFilePath(QString filePath) { m_filePath = filePath; }
+    void stop() { m_isRunning = false; }
     virtual void run()
     {
+        m_isRunning = true;
         QFile file(m_filePath);
         if (file.open(QFile::ReadOnly))
         {
@@ -31,7 +34,7 @@ public:
             //逐段读取文件, 送入音频播放对象中
             int32 dataLen = 64 * 1024;
             char* pData = new char[dataLen];
-            while (file.atEnd())
+            while (file.atEnd() && m_isRunning == true)
             {
                 int realReadLen = file.read(pData, dataLen);
                 if (realReadLen > 0)
@@ -58,10 +61,12 @@ public:
         {
             qDebug() << "open file error";
         }
+        m_isRunning = false;
         return;
     }
 
 private:
+    bool m_isRunning;
     QString m_filePath;
 };
 

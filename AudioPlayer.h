@@ -6,98 +6,12 @@ extern "C"
 #include "include/sdl/SDL.h"
 }
 #include "typedef.h"
+#include "CycleQueue/CycleQueue.h"
 #include <string>
 #include <queue>
 
 namespace AudioPlayerNS
 {
-
-#define MAX_MEM_COST (64 * 1024 * 1024) //允许的内存消耗
-
-//内存片结构体
-typedef struct _MemPiece
-{
-    char* data;
-    int32 len;
-}
-MemPiece;
-
-//数据队列, 内部存储的是一片片内存片.
-class DataQueue
-{
-public:
-    DataQueue(int32 maxLen = MAX_MEM_COST)
-    {
-        m_maxLen = maxLen;
-        m_dataSize = 0;
-    }
-    ~DataQueue()
-    {
-        //销毁所有内存空间
-        while (m_queue.size() > 0)
-        {
-            MemPiece mp = m_queue.front();
-            m_queue.pop();
-            delete[] mp.data;
-            mp.data = NULL;
-        }
-    }
-
-    //向数据队列中加入一个内存片
-    bool push(const char* data, int32 len)
-    {
-        bool ret = true;
-        if (m_dataSize + len <= m_maxLen)
-        {   //允许存放此数据
-            MemPiece mp;
-            mp.data = new char[len];
-            memcpy(mp.data, data, len);
-            mp.len = len;
-            m_queue.push(mp);
-            m_dataSize += len;
-        }
-        else
-        {
-            ret = false;
-        }
-        return ret;
-    }
-
-    //获取队列头的内存片(取出, 但不会删除)
-    bool getFront(char** data, int32& len)
-    {
-        bool ret = true;
-        if (m_queue.size() > 0)
-        {
-            MemPiece mp = m_queue.front();
-            *data = mp.data;
-            len = mp.len;
-        }
-        else
-        {
-            ret = false;
-        }
-        return ret;
-    }
-
-    //删除队列头的内存片
-    void pop()
-    {
-        if (m_queue.size() > 0)
-        {
-            MemPiece mp = m_queue.front();
-            m_queue.pop();
-            delete[] mp.data;
-            mp.data = NULL;
-            m_dataSize -= mp.len;
-        }
-    }
-
-private:
-    int32 m_dataSize;   //当前数据占用堆空间的大小
-    int32 m_maxLen;     //当前数据的最大长度
-    std::queue<MemPiece> m_queue; //数据队列
-};
 
 typedef enum _DataFormat
 {
@@ -112,7 +26,7 @@ DataFormat;
 
 typedef enum _AudioPlayerRet
 {
-    AP_OK = 0,
+    AP_OK = 0,          //成功
     AP_SDL_INIT_ERR,    //SDL底层库初始化失败
     AP_SDL_OPEN_ERR,    //SDL底层库打开文件失败
     AP_BUFFER_FULL, //数据buffer满
@@ -136,6 +50,7 @@ class AudioPlayer
 {
 public:
     AudioPlayer();
+    virtual ~AudioPlayer();
 
     APRet init(AudioInfo info);
     APRet play();   //播放
@@ -149,7 +64,8 @@ public:
     friend void audio_callback(void *udata, Uint8 *stream, int len);
 
 private:
-    DataQueue m_dataQueue;
+    CycleQueue m_dataQueue; //数据队列, 用于存放外界输入的数据
+    char* m_pTempBuffer;    //数据缓冲, 在SDL Mix之前临时存放数据
 
     SDL_AudioFormat getAudioFormatFromDataFormat(DataFormat dataFormat);
 };

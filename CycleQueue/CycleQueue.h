@@ -16,7 +16,7 @@ public:
     CycleQueue(int size = CYCLE_QUEUE_DEFAULT_SIZE);
     virtual ~CycleQueue();
     //写入, 读取数据, 返回值为实际写入/读取的数据量
-    int write(char* pBuf, int size);
+    int write(const char* pBuf, int size);
     int read(char* pBuf, int size);
 
     //队列是否已满

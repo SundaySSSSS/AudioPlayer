@@ -19,7 +19,7 @@ CycleQueue::~CycleQueue()
 	delete[] m_pBuf;    
 }   
 
-int CycleQueue::write(char* pBuf, int size)
+int CycleQueue::write(const char* pBuf, int size)
 {    
     if(size <= 0)
     {

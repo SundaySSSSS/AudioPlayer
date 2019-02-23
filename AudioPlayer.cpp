@@ -9,6 +9,7 @@ static  Uint8  *audio_chunk;
 static  Uint32  audio_len;
 static  Uint8  *audio_pos;
 
+#define MAX_MIX_SIZE (64 * 1024)
 
 void audio_callback(void *udata, Uint8 *stream, int len)
 {
@@ -22,19 +23,28 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     AudioPlayer* pAp = (AudioPlayer*)udata;
     SDL_memset(stream, 0, len);
 
-    char* pData = NULL;
-    int32 dataLen = 0;
-    //pAp->m_dataQueue.getFront(pData, dataLen);
-
-    if(audio_len==0)		/*  Only  play  if  we  have  data  left  */
+    //获取当前存放的数据量
+    int32 dataSize = pAp->m_dataQueue.getUsedSize();
+    if (dataSize <= 0)
+    {   //当前已经没有数据了, 直接退出
         return;
-    len=(len>audio_len?audio_len:len);	/*  Mix  as  much  data  as  possible  */
+    }
+    if (len > dataSize)
+    {
+        len = dataSize;
+    }
+    //限制len的大小
+    if (len > MAX_MIX_SIZE)
+    {
+        len = MAX_MIX_SIZE;
+    }
+    //从数据队列中读取数据
+    pAp->m_dataQueue.read(pAp->m_pTempBuffer, len);
 
-    SDL_MixAudio(stream,audio_pos,len,SDL_MIX_MAXVOLUME);
-    audio_pos += len;
-    audio_len -= len;
+    SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, SDL_MIX_MAXVOLUME);
 }
 
+#if 0
 void fill_audio(void *udata ,Uint8 *stream,int len)
 {
     //SDL 2.0
@@ -47,10 +57,20 @@ void fill_audio(void *udata ,Uint8 *stream,int len)
     audio_pos += len;
     audio_len -= len;
 }
+#endif
 
 AudioPlayer::AudioPlayer()
 {
-    ;
+    m_pTempBuffer = new char[MAX_MIX_SIZE];
+}
+
+AudioPlayer::~AudioPlayer()
+{
+    if (m_pTempBuffer != NULL)
+    {
+        delete[] m_pTempBuffer;
+        m_pTempBuffer = NULL;
+    }
 }
 
 
@@ -89,14 +109,20 @@ APRet AudioPlayer::play()
 
 APRet AudioPlayer::pushData(const char *data, int32 len)
 {
-    if (m_dataQueue.push(data, len))
+    APRet ret = AP_OK;
+    int32 freeSpace = m_dataQueue.getFreeSize();
+    if (freeSpace >= len)
     {
-        return AP_OK;
+        if (m_dataQueue.write(data, len) != len)
+        {
+            ret = AP_UNKNOWN_ERR;
+        }
     }
     else
     {
-        return AP_BUFFER_FULL;
+        ret = AP_BUFFER_FULL;
     }
+    return ret;
 }
 
 int AudioPlayer::playWav(const char *filePath)
@@ -113,7 +139,7 @@ int AudioPlayer::playWav(const char *filePath)
     wanted_spec.channels = 2;
     wanted_spec.silence = 0;
     wanted_spec.samples = 1024;
-    wanted_spec.callback = fill_audio;
+    //wanted_spec.callback = fill_audio;
 
     if (SDL_OpenAudio(&wanted_spec, NULL) < 0)
     {
