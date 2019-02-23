@@ -27,6 +27,7 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     int32 dataSize = pAp->m_dataQueue.getUsedSize();
     if (dataSize <= 0)
     {   //当前已经没有数据了, 直接退出
+        qDebug() << "no data";
         return;
     }
     if (len > dataSize)
@@ -41,6 +42,7 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     //从数据队列中读取数据
     pAp->m_dataQueue.read(pAp->m_pTempBuffer, len);
 
+    qDebug() << "mix len" << len;
     SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, SDL_MIX_MAXVOLUME);
 }
 

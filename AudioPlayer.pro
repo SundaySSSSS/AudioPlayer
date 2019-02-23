@@ -24,6 +24,5 @@ HEADERS  += widget.h \
 FORMS    += widget.ui
 
 LIBS += -L../bin -lSDL2
-LIBS += -L../bin -lMyDll
 
 DESTDIR = ../bin

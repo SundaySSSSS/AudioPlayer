@@ -11,17 +11,23 @@ namespace Ui {
 class Widget;
 }
 
+typedef struct _AudioPlayerThreadParam
+{
+    QString filePath;
+}
+AudioPlayerThreadParam;
+
 class ReadFileThread: public QThread
 {
     Q_OBJECT
 public:
     ReadFileThread() { m_isRunning = false; }
-    void setFilePath(QString filePath) { m_filePath = filePath; }
+    void setParam(AudioPlayerThreadParam param) { m_param = param; }
     void stop() { m_isRunning = false; }
     virtual void run()
     {
         m_isRunning = true;
-        QFile file(m_filePath);
+        QFile file(m_param.filePath);
         if (file.open(QFile::ReadOnly))
         {
             AudioPlayerNS::AudioInfo audioInfo;
@@ -32,6 +38,7 @@ public:
             ap.init(audioInfo);
             ap.play();
             //逐段读取文件, 送入音频播放对象中
+            qDebug() << "begin read file data";
             int32 dataLen = 64 * 1024;
             char* pData = new char[dataLen];
             while (file.atEnd() && m_isRunning == true)
@@ -42,6 +49,7 @@ public:
                     bool isPushed = false;
                     while (isPushed == false)
                     {
+                        qDebug() << "push data" << realReadLen;
                         ap.pushData(pData, realReadLen);
                         msleep(500);
                     }
@@ -67,7 +75,7 @@ public:
 
 private:
     bool m_isRunning;
-    QString m_filePath;
+    AudioPlayerThreadParam m_param;
 };
 
 class Widget : public QWidget
@@ -84,6 +92,7 @@ private slots:
 private:
     Ui::Widget *ui;
     AudioPlayerNS::AudioPlayer m_ap;
+    ReadFileThread m_thread;
 };
 
 #endif // WIDGET_H
