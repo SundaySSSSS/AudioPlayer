@@ -129,6 +129,8 @@ typedef struct _AudioInfo
 }
 AudioInfo;
 
+//音频回调函数
+void audio_callback(void *udata, Uint8 *stream, int len);
 
 class AudioPlayer
 {
@@ -142,6 +144,9 @@ public:
     APRet pushData(const char* data, int32 len);  //向缓存中输入数据， 如果已经播完， 则暂停，如果重新输入数据， 则自动重新开始播放
 
     int playWav(const char* filePath);
+
+    //将音频回调函数设置为友元
+    friend void audio_callback(void *udata, Uint8 *stream, int len);
 
 private:
     DataQueue m_dataQueue;

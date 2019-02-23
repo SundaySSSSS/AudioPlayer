@@ -49,6 +49,10 @@ public:
             pData = NULL;
 
             file.close();
+            while (1)
+            {
+                msleep(1000);
+            }
         }
         else
         {

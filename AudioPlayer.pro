@@ -14,13 +14,16 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         widget.cpp \
-    AudioPlayer.cpp
+    AudioPlayer.cpp \
+    CycleQueue/CycleQueue.cpp
 
 HEADERS  += widget.h \
-    AudioPlayer.h
+    AudioPlayer.h \
+    CycleQueue/CycleQueue.h
 
 FORMS    += widget.ui
 
 LIBS += -L../bin -lSDL2
+LIBS += -L../bin -lMyDll
 
 DESTDIR = ../bin

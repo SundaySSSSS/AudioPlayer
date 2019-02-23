@@ -13,6 +13,26 @@ static  Uint8  *audio_pos;
 void audio_callback(void *udata, Uint8 *stream, int len)
 {
     qDebug() << "audio callback" << len;
+    if (udata == NULL)
+    {
+        qDebug() << "invalid udata";
+        return;
+    }
+    //取出音频播放器指针
+    AudioPlayer* pAp = (AudioPlayer*)udata;
+    SDL_memset(stream, 0, len);
+
+    char* pData = NULL;
+    int32 dataLen = 0;
+    //pAp->m_dataQueue.getFront(pData, dataLen);
+
+    if(audio_len==0)		/*  Only  play  if  we  have  data  left  */
+        return;
+    len=(len>audio_len?audio_len:len);	/*  Mix  as  much  data  as  possible  */
+
+    SDL_MixAudio(stream,audio_pos,len,SDL_MIX_MAXVOLUME);
+    audio_pos += len;
+    audio_len -= len;
 }
 
 void fill_audio(void *udata ,Uint8 *stream,int len)
@@ -49,6 +69,7 @@ APRet AudioPlayer::init(AudioPlayerNS::AudioInfo info)
         audioSpec.silence = 0;
         audioSpec.samples = 1024;
         audioSpec.callback = audio_callback;
+        audioSpec.userdata = this;
         if (SDL_OpenAudio(&audioSpec, NULL) < 0)
         {
             return AP_SDL_OPEN_ERR;
