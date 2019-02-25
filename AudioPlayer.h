@@ -9,6 +9,7 @@ extern "C"
 #include "CycleQueue/CycleQueue.h"
 #include <string>
 #include <queue>
+#include <QMutex>
 
 namespace AudioPlayerNS
 {
@@ -30,6 +31,7 @@ typedef enum _AudioPlayerRet
     AP_SDL_INIT_ERR,    //SDL底层库初始化失败
     AP_SDL_OPEN_ERR,    //SDL底层库打开文件失败
     AP_BUFFER_FULL, //数据buffer满
+    AP_BUFFER_DATA_NOT_ENOUGH,  //数据buffer中数据不足
     AP_UNKNOWN_ERR, //未知错误
 }
 APRet;
@@ -56,7 +58,8 @@ public:
     APRet play();   //播放
     APRet pause();  //暂停播放
     APRet destroy();   //停止播放， 调用此接口后， 需要重新进行init
-    APRet pushData(const char* data, int32 len);  //向缓存中输入数据， 如果已经播完， 则暂停，如果重新输入数据， 则自动重新开始播放
+    APRet pushData(const char* data, int32 len);  //向缓存中输入数据
+    APRet popData(char* data, int32& len);  //从缓存中取出数据
 
     int playWav(const char* filePath);
 
@@ -64,6 +67,7 @@ public:
     friend void audio_callback(void *udata, Uint8 *stream, int len);
 
 private:
+    QMutex m_mutex;
     CycleQueue m_dataQueue; //数据队列, 用于存放外界输入的数据
     char* m_pTempBuffer;    //数据缓冲, 在SDL Mix之前临时存放数据
 

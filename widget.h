@@ -31,7 +31,7 @@ public:
         if (file.open(QFile::ReadOnly))
         {
             AudioPlayerNS::AudioInfo audioInfo;
-            audioInfo.fs = 44100;
+            audioInfo.fs = 22050;
             audioInfo.format = AudioPlayerNS::FORMAT_INT16;
             audioInfo.channels = 2;
             AudioPlayerNS::AudioPlayer ap;
@@ -39,19 +39,26 @@ public:
             ap.play();
             //逐段读取文件, 送入音频播放对象中
             qDebug() << "begin read file data";
-            int32 dataLen = 64 * 1024;
+            int32 dataLen = 256 * 1024;
             char* pData = new char[dataLen];
-            while (file.atEnd() && m_isRunning == true)
+            while (!file.atEnd() && m_isRunning == true)
             {
                 int realReadLen = file.read(pData, dataLen);
                 if (realReadLen > 0)
                 {
-                    bool isPushed = false;
-                    while (isPushed == false)
+                    AudioPlayerNS::APRet isPushed = AudioPlayerNS::AP_UNKNOWN_ERR;
+                    while (isPushed != AudioPlayerNS::AP_OK)
                     {
-                        qDebug() << "push data" << realReadLen;
-                        ap.pushData(pData, realReadLen);
-                        msleep(500);
+                        //qDebug() << "push data" << realReadLen;
+                        isPushed = ap.pushData(pData, realReadLen);
+                        if (isPushed != AudioPlayerNS::AP_OK)
+                        {
+                            if (AudioPlayerNS::AP_UNKNOWN_ERR == isPushed)
+                            {
+                                qDebug() << "pushed error";
+                            }
+                        }
+                        usleep(20);
                     }
                 }
             }

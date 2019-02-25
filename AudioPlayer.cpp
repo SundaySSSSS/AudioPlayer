@@ -13,7 +13,7 @@ static  Uint8  *audio_pos;
 
 void audio_callback(void *udata, Uint8 *stream, int len)
 {
-    qDebug() << "audio callback" << len;
+    //qDebug() << "audio callback" << len;
     if (udata == NULL)
     {
         qDebug() << "invalid udata";
@@ -40,9 +40,10 @@ void audio_callback(void *udata, Uint8 *stream, int len)
         len = MAX_MIX_SIZE;
     }
     //从数据队列中读取数据
-    pAp->m_dataQueue.read(pAp->m_pTempBuffer, len);
+    memset(pAp->m_pTempBuffer, 0, MAX_MIX_SIZE);
+    pAp->popData(pAp->m_pTempBuffer, len);
 
-    qDebug() << "mix len" << len;
+    //qDebug() << "mix len =" << len;
     SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, SDL_MIX_MAXVOLUME);
 }
 
@@ -111,6 +112,7 @@ APRet AudioPlayer::play()
 
 APRet AudioPlayer::pushData(const char *data, int32 len)
 {
+    m_mutex.lock();
     APRet ret = AP_OK;
     int32 freeSpace = m_dataQueue.getFreeSize();
     if (freeSpace >= len)
@@ -124,6 +126,27 @@ APRet AudioPlayer::pushData(const char *data, int32 len)
     {
         ret = AP_BUFFER_FULL;
     }
+    m_mutex.unlock();
+    return ret;
+}
+
+APRet AudioPlayer::popData(char *data, int32 &len)
+{
+    m_mutex.lock();
+    APRet ret = AP_OK;
+    int32 usedSpace = m_dataQueue.getUsedSize();
+    if (usedSpace >= len)
+    {
+        if (m_dataQueue.read(data, len) != len)
+        {
+            ret = AP_UNKNOWN_ERR;
+        }
+    }
+    else
+    {
+        ret = AP_BUFFER_DATA_NOT_ENOUGH;
+    }
+    m_mutex.unlock();
     return ret;
 }
 
