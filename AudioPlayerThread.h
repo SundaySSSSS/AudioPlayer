@@ -44,6 +44,10 @@ private:
     AudioPlayer m_audioPlayer;
 
     virtual void run();
+
+signals:
+    void sendPlayFinished();    //发送播放完毕
+    void sendPlayFileProcess(float rate);   //发送文件播放比例
 };
 
 }   //namespace AudioPlayerNS
