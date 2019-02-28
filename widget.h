@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QDebug>
 #include "AudioPlayer.h"
+#include "AudioPlayerThread.h"
 
 namespace Ui {
 class Widget;
@@ -100,6 +101,7 @@ private:
     Ui::Widget *ui;
     AudioPlayerNS::AudioPlayer m_ap;
     ReadFileThread m_thread;
+    AudioPlayerNS::AudioPlayerThread m_apThread;
 };
 
 #endif // WIDGET_H

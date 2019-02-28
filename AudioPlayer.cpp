@@ -209,13 +209,14 @@ int AudioPlayer::playWav(const char *filePath)
 
 SDL_AudioFormat AudioPlayer::getAudioFormatFromDataFormat(DataFormat dataFormat)
 {
-    SDL_AudioFormat sdl_audioFormat = AUDIO_S16SYS;
+    SDL_AudioFormat sdl_audioFormat = AUDIO_S16;
     switch (dataFormat)
     {
-    case FORMAT_FLOAT:
+    case FORMAT_FLOAT32:
         sdl_audioFormat = AUDIO_F32;
         break;
     case FORMAT_INT32:
+    case FORMAT_UINT32: //sdl播放器不支持32位无符号整数, 后期需进行转换
         sdl_audioFormat = AUDIO_S32;
         break;
     case FORMAT_INT16:

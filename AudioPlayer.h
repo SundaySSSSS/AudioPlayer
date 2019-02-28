@@ -14,14 +14,22 @@ extern "C"
 namespace AudioPlayerNS
 {
 
+typedef enum _ChannelType
+{
+    SINGLE_I = 0,   //单通道
+    I_Q = 1,        //双通道
+}
+ChannelType;
+
 typedef enum _DataFormat
 {
-    FORMAT_FLOAT,
-    FORMAT_INT32,
-    FORMAT_INT16,
-    FORMAT_UINT16,
     FORMAT_INT8,
     FORMAT_UINT8,
+    FORMAT_INT16,
+    FORMAT_UINT16,
+    FORMAT_INT32,
+    FORMAT_UINT32,
+    FORMAT_FLOAT32,
 }
 DataFormat;
 
