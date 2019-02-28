@@ -21,6 +21,7 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     }
     //取出音频播放器指针
     AudioPlayer* pAp = (AudioPlayer*)udata;
+
     SDL_memset(stream, 0, len);
 
     //获取当前存放的数据量
@@ -47,21 +48,6 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, SDL_MIX_MAXVOLUME);
 }
 
-#if 0
-void fill_audio(void *udata ,Uint8 *stream,int len)
-{
-    //SDL 2.0
-    SDL_memset(stream, 0, len);
-    if(audio_len==0)		/*  Only  play  if  we  have  data  left  */
-        return;
-    len=(len>audio_len?audio_len:len);	/*  Mix  as  much  data  as  possible  */
-
-    SDL_MixAudio(stream,audio_pos,len,SDL_MIX_MAXVOLUME);
-    audio_pos += len;
-    audio_len -= len;
-}
-#endif
-
 AudioPlayer::AudioPlayer()
 {
     m_pTempBuffer = new char[MAX_MIX_SIZE];
@@ -76,38 +62,45 @@ AudioPlayer::~AudioPlayer()
     }
 }
 
-
 APRet AudioPlayer::init(AudioPlayerNS::AudioInfo info)
 {
-    if (SDL_Init(SDL_INIT_AUDIO))
+    if (SDL_WasInit(SDL_INIT_AUDIO) == 0)
+    {   //SDL尚未进行初始化， 初始化
+        if (SDL_Init(SDL_INIT_AUDIO))
+        {   //没有初始化成功
+            return AP_SDL_INIT_ERR;
+        }
+    }
+
+    //设置音频信息
+    SDL_AudioSpec audioSpec;
+    audioSpec.freq = info.fs;
+    audioSpec.format = getAudioFormatFromDataFormat(info.format);
+    audioSpec.channels = info.channels;
+    audioSpec.silence = 0;
+    audioSpec.samples = 1024;
+    audioSpec.callback = audio_callback;
+    audioSpec.userdata = this;
+    if (SDL_OpenAudio(&audioSpec, NULL) < 0)
     {
-        return AP_SDL_INIT_ERR;
+        return AP_SDL_OPEN_ERR;
     }
     else
     {
-        SDL_AudioSpec audioSpec;
-        audioSpec.freq = info.fs;
-        audioSpec.format = getAudioFormatFromDataFormat(info.format);
-        audioSpec.channels = info.channels;
-        audioSpec.silence = 0;
-        audioSpec.samples = 1024;
-        audioSpec.callback = audio_callback;
-        audioSpec.userdata = this;
-        if (SDL_OpenAudio(&audioSpec, NULL) < 0)
-        {
-            return AP_SDL_OPEN_ERR;
-        }
-        else
-        {
-            return AP_OK;
-        }
+        return AP_OK;
     }
+
 }
 
-APRet AudioPlayer::play()
+void AudioPlayer::play()
 {
     SDL_PauseAudio(0);
-    return AP_OK;
+}
+
+void AudioPlayer::destroy()
+{
+    SDL_CloseAudio();
+    SDL_Quit();
 }
 
 APRet AudioPlayer::pushData(const char *data, int32 len)

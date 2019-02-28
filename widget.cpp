@@ -17,15 +17,6 @@ Widget::~Widget()
 
 void Widget::on_pushButton_Play_clicked()
 {
-#if 0
-    m_thread.stop();
-    m_thread.wait();
-
-    AudioPlayerThreadParam param;
-    param.filePath = "C:/test/Weight of the World.wav";
-    m_thread.setParam(param);
-    m_thread.start();
-#endif
     AudioPlayerNS::AudioFileInfo fileInfo;
     fileInfo.path = "C:/test/Weight of the World.wav";
     fileInfo.fs = 22050;
@@ -33,6 +24,11 @@ void Widget::on_pushButton_Play_clicked()
     fileInfo.dataFormat = AudioPlayerNS::FORMAT_INT16;
     fileInfo.startReadPos = 0;
     fileInfo.stopReadPos = -1;
-    m_apThread.setPlayFile(fileInfo);
+    m_apThread.init(fileInfo);
     m_apThread.play();
+}
+
+void Widget::on_pushButton_Pause_clicked()
+{
+    m_apThread.pause();
 }

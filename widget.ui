@@ -16,14 +16,63 @@
   <widget class="QPushButton" name="pushButton_Play">
    <property name="geometry">
     <rect>
-     <x>170</x>
-     <y>220</y>
+     <x>50</x>
+     <y>210</y>
      <width>80</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>play</string>
+    <string>播放</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_Pause">
+   <property name="geometry">
+    <rect>
+     <x>160</x>
+     <y>210</y>
+     <width>80</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>暂停</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_Stop">
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>210</y>
+     <width>80</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>停止</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pushButton_Browser">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>120</y>
+     <width>80</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>浏览</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lineEdit_Path">
+   <property name="geometry">
+    <rect>
+     <x>80</x>
+     <y>120</y>
+     <width>171</width>
+     <height>20</height>
+    </rect>
    </property>
   </widget>
  </widget>

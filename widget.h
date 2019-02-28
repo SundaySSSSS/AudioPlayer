@@ -97,6 +97,8 @@ public:
 private slots:
     void on_pushButton_Play_clicked();
 
+    void on_pushButton_Pause_clicked();
+
 private:
     Ui::Widget *ui;
     AudioPlayerNS::AudioPlayer m_ap;

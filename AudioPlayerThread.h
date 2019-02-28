@@ -45,12 +45,10 @@ class AudioPlayerThread : public QThread
 public:
     explicit AudioPlayerThread(QObject* parent = NULL);
 
-    //设置文件基本信息
-    bool setPlayFile(const AudioFileInfo& fileInfo);
-
+    //初始化
+    bool init(const AudioFileInfo& fileInfo);
     //播放
     bool play();
-
     //暂停
     void pause();
     //恢复
@@ -63,7 +61,10 @@ public:
     void clear();
 private:
     AudioFileInfo m_fileInfo;
-    AudioState m_state;
+    QMutex m_mutex;
+    AudioState m_state; //标记当前播放状态
+    AudioState getState();
+    void setState(AudioState state);
     virtual void run();
 };
 

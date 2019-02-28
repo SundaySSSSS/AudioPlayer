@@ -11,7 +11,7 @@ AudioPlayerThread::AudioPlayerThread(QObject *parent)
     m_state = AUDIO_UNINITED;
 }
 
-bool AudioPlayerThread::setPlayFile(const AudioFileInfo &fileInfo)
+bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
 {
     bool ret = false;
     if (m_state == AUDIO_UNINITED)
@@ -33,6 +33,7 @@ bool AudioPlayerThread::setPlayFile(const AudioFileInfo &fileInfo)
 
 bool AudioPlayerThread::play()
 {
+    m_mutex.lock();
     bool ret = false;
     if (m_state == AUDIO_READY)
     {
@@ -40,7 +41,29 @@ bool AudioPlayerThread::play()
         this->start();
         ret = true;
     }
+    m_mutex.unlock();
     return ret;
+}
+
+void AudioPlayerThread::pause()
+{
+    setState(AUDIO_PAUSE);
+}
+
+AudioState AudioPlayerThread::getState()
+{
+    AudioState ret;
+    m_mutex.lock();
+    ret = m_state;
+    m_mutex.unlock();
+    return ret;
+}
+
+void AudioPlayerThread::setState(AudioState state)
+{
+    m_mutex.lock();
+    m_state = state;
+    m_mutex.unlock();
 }
 
 void AudioPlayerThread::run()
@@ -67,8 +90,22 @@ void AudioPlayerThread::run()
         int32 dataLen = 256 * 1024;
         char* pData = new char[dataLen];
         file.seek(m_fileInfo.startReadPos);
-        while (!file.atEnd() && m_state == AUDIO_PLAYING)
+        while (!file.atEnd())
         {
+            AudioState state = getState();
+            if (state == AUDIO_PLAYING)
+            {
+                ;   //Do Nothing
+            }
+            else if (state == AUDIO_PAUSE)
+            {   //暂停状态, 进行空转
+                msleep(100);
+                continue;
+            }
+            else
+            {   //其他状态不允许
+                break;
+            }
             //判定是否还需要继续读取
             if (file.pos() >= m_fileInfo.stopReadPos)
             {

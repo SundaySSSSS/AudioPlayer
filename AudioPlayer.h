@@ -63,11 +63,9 @@ public:
     virtual ~AudioPlayer();
 
     APRet init(AudioInfo info);
-    APRet play();   //播放
-    APRet pause();  //暂停播放
-    APRet destroy();   //停止播放， 调用此接口后， 需要重新进行init
+    void play();   //播放
+    void destroy();   //停止播放， 调用此接口后， 需要重新进行init
     APRet pushData(const char* data, int32 len);  //向缓存中输入数据
-    APRet popData(char* data, int32& len);  //从缓存中取出数据
 
     int playWav(const char* filePath);
 
@@ -79,6 +77,7 @@ private:
     CycleQueue m_dataQueue; //数据队列, 用于存放外界输入的数据
     char* m_pTempBuffer;    //数据缓冲, 在SDL Mix之前临时存放数据
 
+    APRet popData(char* data, int32& len);  //从缓存中取出数据
     SDL_AudioFormat getAudioFormatFromDataFormat(DataFormat dataFormat);
 };
 
