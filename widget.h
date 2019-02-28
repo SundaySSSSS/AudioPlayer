@@ -33,6 +33,8 @@ private slots:
     void recvPlayedProcess(float rate);
     void recvPlayFinished();
 
+    void on_pushButton_MemPlay_clicked();
+
 private:
     Ui::Widget *ui;
     AudioPlayerNS::AudioPlayer m_ap;

@@ -80,6 +80,7 @@ public:
 
     AudioState getState();//获取音频播放状态
     int64 getPlayedLen() { return m_playedLen; }
+    bool getIsNoData() { return m_isNoData; }  //获取是否当前缓冲中有数据
 
     //将音频回调函数设置为友元
     friend void audio_callback(void *udata, Uint8 *stream, int len);
@@ -89,6 +90,8 @@ private:
     CycleQueue m_dataQueue; //数据队列, 用于存放外界输入的数据
     char* m_pTempBuffer;    //数据缓冲, 在SDL Mix之前临时存放数据
     int32 m_volume; //音量
+    bool m_isNoData;    //标记是否有数据
+
 
     /* 播放进度控制 */
     int64 m_playedLen;    //已经播放的点数

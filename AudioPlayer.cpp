@@ -24,8 +24,13 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     int32 dataSize = pAp->m_dataQueue.getUsedSize();
     if (dataSize <= 0)
     {   //当前已经没有数据了, 直接退出
-        qDebug() << "no data";
+        //qDebug() << "no data";
+        pAp->m_isNoData = true;
         return;
+    }
+    else
+    {
+        pAp->m_isNoData = false;
     }
     if (len > dataSize)
     {
@@ -50,6 +55,7 @@ AudioPlayer::AudioPlayer()
 {
     m_pTempBuffer = new char[MAX_MIX_SIZE];
     m_volume = 128;
+    m_isNoData = false;
 }
 
 AudioPlayer::~AudioPlayer()

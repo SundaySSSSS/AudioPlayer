@@ -20,14 +20,27 @@ typedef struct _AudioFileInfo
 }
 AudioFileInfo;
 
+typedef struct _AudioMemInfo
+{
+    int32 fs;   //采样率
+    ChannelType channeType; //通道类型
+    DataFormat dataFormat;  //数据类型
+}
+AudioMemInfo;
+
 class AudioPlayerThread : public QThread
 {
     Q_OBJECT
 public:
     explicit AudioPlayerThread(QObject* parent = NULL);
 
-    //初始化
+    //初始化(文件模式: 从文件中读取数据)
     bool init(const AudioFileInfo& fileInfo);
+
+    //初始化为内存模式, 等待使用push来输入数据播放
+    bool init(const AudioMemInfo& memInfo);
+    bool push(const char* data, int32 len);
+
     //播放
     void play();
     //暂停
@@ -40,10 +53,17 @@ public:
     void setVolume(int volume);
 private:
     bool m_isRunning;
+    bool m_isMemMode;
     AudioFileInfo m_fileInfo;
+    AudioMemInfo m_memInfo;
     AudioPlayer m_audioPlayer;
 
     virtual void run();
+
+    //文件模式的线程函数
+    void fileModeRun();
+    //内存模式的线程函数
+    void memModeRun();
 
     float m_playedRate;
     //检查文件进度, 适时发送进度信号
@@ -54,6 +74,7 @@ signals:
     void sendPlayFinished();    //发送播放完毕
     void sendPlayFileProcess(float rate);   //发送文件播放比例
 };
+
 
 }   //namespace AudioPlayerNS
 

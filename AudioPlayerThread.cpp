@@ -9,6 +9,7 @@ AudioPlayerThread::AudioPlayerThread(QObject *parent)
     : QThread(parent)
 {
     m_isRunning = false;
+    m_isMemMode = false;
 }
 
 bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
@@ -39,6 +40,48 @@ bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
         if (initRet == AP_OK)
         {
             m_playedRate = 0.0f;
+            m_isMemMode = false;
+            ret = true;
+        }
+    }
+    return ret;
+}
+
+bool AudioPlayerThread::init(const AudioMemInfo &memInfo)
+{
+    bool ret = false;
+
+    m_memInfo = memInfo;
+    AudioPlayerNS::AudioInfo audioInfo;
+    audioInfo.fs = m_memInfo.fs;
+    audioInfo.format = m_memInfo.dataFormat;
+    if (m_memInfo.channeType == SINGLE_I)
+    {
+        audioInfo.channels = 1;
+    }
+    else
+    {
+        audioInfo.channels = 2;
+    }
+    APRet initRet = m_audioPlayer.init(audioInfo);
+    if (initRet == AP_OK)
+    {
+        m_playedRate = 0.0f;
+        m_isMemMode = true;
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool AudioPlayerThread::push(const char *data, int32 len)
+{
+    bool ret = false;
+    if (m_isMemMode)
+    {
+        APRet pushRet = m_audioPlayer.pushData(data, len);
+        if (pushRet == AP_OK)
+        {
             ret = true;
         }
     }
@@ -47,6 +90,7 @@ bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
 
 void AudioPlayerThread::play()
 {
+    this->stop();
     m_isRunning = true;
     this->start();
 }
@@ -73,6 +117,37 @@ void AudioPlayerThread::setVolume(int volume)
 }
 
 void AudioPlayerThread::run()
+{
+    if (m_isMemMode)
+    {
+        memModeRun();
+    }
+    else
+    {
+        fileModeRun();
+    }
+}
+
+bool AudioPlayerThread::checkFileProcess()
+{
+    int64 playedLen = m_audioPlayer.getPlayedLen();
+    int64 totalLen = m_fileInfo.stopReadPos - m_fileInfo.startReadPos;
+    float rate = double(playedLen) / double(totalLen);
+    if (rate - m_playedRate > 0.01f)
+    {
+        emit sendPlayFileProcess(rate);
+    }
+    if (playedLen >= totalLen)
+    {   //已经播放完毕
+        return true;
+    }
+    else
+    {   //尚未播放完毕
+        return false;
+    }
+}
+
+void AudioPlayerNS::AudioPlayerThread::fileModeRun()
 {
     QFile file(m_fileInfo.path);
     if (file.open(QFile::ReadOnly))
@@ -144,23 +219,20 @@ void AudioPlayerThread::run()
     {
         qDebug() << "open file error";
     }
+    m_isRunning = false;
 }
 
-bool AudioPlayerThread::checkFileProcess()
+void AudioPlayerThread::memModeRun()
 {
-    int64 playedLen = m_audioPlayer.getPlayedLen();
-    int64 totalLen = m_fileInfo.stopReadPos - m_fileInfo.startReadPos;
-    float rate = double(playedLen) / double(totalLen);
-    if (rate - m_playedRate > 0.01f)
+    //内存模式, 不需要线程读取文件, 直接空转即可
+    m_audioPlayer.play();
+    while (m_isRunning)
     {
-        emit sendPlayFileProcess(rate);
+        if (m_audioPlayer.getIsNoData())
+        {   //当缓冲区被清空后, 就认为播放结束
+            emit sendPlayFinished();
+        }
+        msleep(10);
     }
-    if (playedLen >= totalLen)
-    {   //已经播放完毕
-        return true;
-    }
-    else
-    {   //尚未播放完毕
-        return false;
-    }
+    m_isRunning = false;
 }
