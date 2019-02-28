@@ -99,6 +99,10 @@ private slots:
 
     void on_pushButton_Pause_clicked();
 
+    void on_pushButton_Stop_clicked();
+
+    void on_horizontalSlider_Volume_valueChanged(int value);
+
 private:
     Ui::Widget *ui;
     AudioPlayerNS::AudioPlayer m_ap;

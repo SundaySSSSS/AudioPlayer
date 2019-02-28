@@ -8,69 +8,22 @@ using namespace AudioPlayerNS;
 AudioPlayerThread::AudioPlayerThread(QObject *parent)
     : QThread(parent)
 {
-    m_state = AUDIO_UNINITED;
+    m_isRunning = false;
 }
 
 bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
 {
     bool ret = false;
-    if (m_state == AUDIO_UNINITED)
+
+    m_fileInfo = fileInfo;
+    QFileInfo qFileInfo(m_fileInfo.path);
+    if (qFileInfo.exists())
     {
-        m_fileInfo = fileInfo;
-        QFileInfo qFileInfo(m_fileInfo.path);
-        if (qFileInfo.exists())
+        if (m_fileInfo.stopReadPos < 0)
         {
-            if (m_fileInfo.stopReadPos < 0)
-            {
-                m_fileInfo.stopReadPos = qFileInfo.size();
-            }
-            m_state = AUDIO_READY;
-            ret = true;
+            m_fileInfo.stopReadPos = qFileInfo.size();
         }
-    }
-    return ret;
-}
-
-bool AudioPlayerThread::play()
-{
-    m_mutex.lock();
-    bool ret = false;
-    if (m_state == AUDIO_READY)
-    {
-        m_state = AUDIO_PLAYING;
-        this->start();
         ret = true;
-    }
-    m_mutex.unlock();
-    return ret;
-}
-
-void AudioPlayerThread::pause()
-{
-    setState(AUDIO_PAUSE);
-}
-
-AudioState AudioPlayerThread::getState()
-{
-    AudioState ret;
-    m_mutex.lock();
-    ret = m_state;
-    m_mutex.unlock();
-    return ret;
-}
-
-void AudioPlayerThread::setState(AudioState state)
-{
-    m_mutex.lock();
-    m_state = state;
-    m_mutex.unlock();
-}
-
-void AudioPlayerThread::run()
-{
-    QFile file(m_fileInfo.path);
-    if (file.open(QFile::ReadOnly))
-    {
         AudioPlayerNS::AudioInfo audioInfo;
         audioInfo.fs = m_fileInfo.fs;
         audioInfo.format = m_fileInfo.dataFormat;
@@ -82,29 +35,56 @@ void AudioPlayerThread::run()
         {
             audioInfo.channels = 2;
         }
-        AudioPlayer ap;
-        ap.init(audioInfo);
-        ap.play();
+        m_audioPlayer.init(audioInfo);
+    }
+    return ret;
+}
+
+void AudioPlayerThread::play()
+{
+    m_isRunning = true;
+    this->start();
+}
+
+void AudioPlayerThread::pause()
+{
+    m_audioPlayer.pause();
+}
+
+void AudioPlayerThread::resume()
+{
+    m_audioPlayer.resume();
+}
+
+void AudioPlayerThread::stop()
+{
+    m_isRunning = false;
+    this->wait();
+}
+
+void AudioPlayerThread::setVolume(int volume)
+{
+    m_audioPlayer.setVolume(volume);
+}
+
+void AudioPlayerThread::run()
+{
+    QFile file(m_fileInfo.path);
+    if (file.open(QFile::ReadOnly))
+    {
         //逐段读取文件, 送入音频播放对象中
         qDebug() << "begin read file data";
         int32 dataLen = 256 * 1024;
         char* pData = new char[dataLen];
         file.seek(m_fileInfo.startReadPos);
-        while (!file.atEnd())
+        m_audioPlayer.play();
+        while (!file.atEnd() && m_isRunning)
         {
-            AudioState state = getState();
-            if (state == AUDIO_PLAYING)
+            AudioState state = m_audioPlayer.getState();
+            if (state == AUDIO_PAUSED)
             {
-                ;   //Do Nothing
-            }
-            else if (state == AUDIO_PAUSE)
-            {   //暂停状态, 进行空转
                 msleep(100);
                 continue;
-            }
-            else
-            {   //其他状态不允许
-                break;
             }
             //判定是否还需要继续读取
             if (file.pos() >= m_fileInfo.stopReadPos)
@@ -123,9 +103,9 @@ void AudioPlayerThread::run()
             if (realReadLen > 0)
             {
                 AudioPlayerNS::APRet isPushed = AudioPlayerNS::AP_UNKNOWN_ERR;
-                while (isPushed != AudioPlayerNS::AP_OK)
+                while (isPushed != AudioPlayerNS::AP_OK && m_isRunning)
                 {
-                    isPushed = ap.pushData(pData, realReadLen);
+                    isPushed = m_audioPlayer.pushData(pData, realReadLen);
                     if (isPushed != AudioPlayerNS::AP_OK)
                     {
                         if (AudioPlayerNS::AP_UNKNOWN_ERR == isPushed)
@@ -142,10 +122,7 @@ void AudioPlayerThread::run()
         pData = NULL;
 
         file.close();
-        while (1)
-        {
-            msleep(1000);
-        }
+        m_audioPlayer.destroy();
     }
     else
     {

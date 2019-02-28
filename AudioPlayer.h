@@ -53,6 +53,14 @@ typedef struct _AudioInfo
 }
 AudioInfo;
 
+typedef enum _AudioState
+{
+    AUDIO_STOPPED = 0,
+    AUDIO_PLAYING,
+    AUDIO_PAUSED
+}
+AudioState;
+
 //音频回调函数
 void audio_callback(void *udata, Uint8 *stream, int len);
 
@@ -64,10 +72,14 @@ public:
 
     APRet init(AudioInfo info);
     void play();   //播放
+    void pause();   //暂停
+    void resume();  //恢复播放
     void destroy();   //停止播放， 调用此接口后， 需要重新进行init
+    //设置音量, 音量范围为0-128, 超过此范围将自动规范到此范围
+    void setVolume(int32 volume);
     APRet pushData(const char* data, int32 len);  //向缓存中输入数据
 
-    int playWav(const char* filePath);
+    AudioState getState();
 
     //将音频回调函数设置为友元
     friend void audio_callback(void *udata, Uint8 *stream, int len);
@@ -76,6 +88,7 @@ private:
     QMutex m_mutex;
     CycleQueue m_dataQueue; //数据队列, 用于存放外界输入的数据
     char* m_pTempBuffer;    //数据缓冲, 在SDL Mix之前临时存放数据
+    int32 m_volume; //音量
 
     APRet popData(char* data, int32& len);  //从缓存中取出数据
     SDL_AudioFormat getAudioFormatFromDataFormat(DataFormat dataFormat);

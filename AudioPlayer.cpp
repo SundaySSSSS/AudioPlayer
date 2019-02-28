@@ -5,10 +5,6 @@
 namespace AudioPlayerNS
 {
 
-static  Uint8  *audio_chunk;
-static  Uint32  audio_len;
-static  Uint8  *audio_pos;
-
 #define MAX_MIX_SIZE (64 * 1024)
 
 void audio_callback(void *udata, Uint8 *stream, int len)
@@ -44,13 +40,15 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     memset(pAp->m_pTempBuffer, 0, MAX_MIX_SIZE);
     pAp->popData(pAp->m_pTempBuffer, len);
 
+    int volume = pAp->m_volume;
     //qDebug() << "mix len =" << len;
-    SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, SDL_MIX_MAXVOLUME);
+    SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, volume);
 }
 
 AudioPlayer::AudioPlayer()
 {
     m_pTempBuffer = new char[MAX_MIX_SIZE];
+    m_volume = 128;
 }
 
 AudioPlayer::~AudioPlayer()
@@ -87,6 +85,7 @@ APRet AudioPlayer::init(AudioPlayerNS::AudioInfo info)
     }
     else
     {
+        m_dataQueue.clear();
         return AP_OK;
     }
 
@@ -97,10 +96,42 @@ void AudioPlayer::play()
     SDL_PauseAudio(0);
 }
 
+void AudioPlayer::pause()
+{
+    AudioState state = getState();
+    if (state == AUDIO_PLAYING)
+    {
+        SDL_PauseAudio(1);
+    }
+}
+
+void AudioPlayer::resume()
+{
+    AudioState state = getState();
+    if (state == AUDIO_PAUSED)
+    {
+        SDL_PauseAudio(0);
+    }
+}
+
 void AudioPlayer::destroy()
 {
     SDL_CloseAudio();
     SDL_Quit();
+}
+
+void AudioPlayer::setVolume(int32 volume)
+{
+    if (volume < 0)
+    {
+        volume = 0;
+    }
+    else if (volume > 128)
+    {
+        volume = 128;
+    }
+
+    m_volume = volume;
 }
 
 APRet AudioPlayer::pushData(const char *data, int32 len)
@@ -123,6 +154,26 @@ APRet AudioPlayer::pushData(const char *data, int32 len)
     return ret;
 }
 
+AudioState AudioPlayer::getState()
+{
+    SDL_AudioStatus status = SDL_GetAudioStatus();
+    AudioState ret = AUDIO_PLAYING;
+    switch (status)
+    {
+    case SDL_AUDIO_STOPPED:
+        ret = AUDIO_STOPPED;
+        break;
+    case SDL_AUDIO_PAUSED:
+        ret = AUDIO_PAUSED;
+        break;
+    case SDL_AUDIO_PLAYING:
+    default:
+        ret = AUDIO_PLAYING;
+        break;
+    }
+    return ret;
+}
+
 APRet AudioPlayer::popData(char *data, int32 &len)
 {
     m_mutex.lock();
@@ -141,63 +192,6 @@ APRet AudioPlayer::popData(char *data, int32 &len)
     }
     m_mutex.unlock();
     return ret;
-}
-
-int AudioPlayer::playWav(const char *filePath)
-{
-    //Init
-    if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
-        qDebug() << QString().sprintf("Could not initialize SDL - %s\n", SDL_GetError());
-        return -1;
-    }
-    //SDL_AudioSpec
-    SDL_AudioSpec wanted_spec;
-    wanted_spec.freq = 44100;
-    wanted_spec.format = AUDIO_S16SYS;
-    wanted_spec.channels = 2;
-    wanted_spec.silence = 0;
-    wanted_spec.samples = 1024;
-    //wanted_spec.callback = fill_audio;
-
-    if (SDL_OpenAudio(&wanted_spec, NULL) < 0)
-    {
-        qDebug() << QString().sprintf("can't open audio.\n");
-        return -1;
-    }
-
-    FILE *fp = fopen(filePath, "rb+");
-    if(fp==NULL)
-    {
-        qDebug() << QString().sprintf("cannot open this file\n");
-        return -1;
-    }
-
-    int pcm_buffer_size = 64 * 1024;
-    char *pcm_buffer=(char *)malloc(pcm_buffer_size);
-    int data_count=0;
-
-    while(1)
-    {
-        if (fread(pcm_buffer, 1, pcm_buffer_size, fp) != pcm_buffer_size)
-        {
-            // Loop
-            fseek(fp, 0, SEEK_SET);
-            fread(pcm_buffer, 1, pcm_buffer_size, fp);
-            data_count=0;
-        }
-        qDebug() << QString().sprintf("Now Playing %10d Bytes data.\n",data_count);
-        data_count+=pcm_buffer_size;
-        //Set audio buffer (PCM data)
-        audio_chunk = (Uint8 *) pcm_buffer;
-        //Audio buffer length
-        audio_len = pcm_buffer_size;
-        audio_pos = audio_chunk;
-        //Play
-        SDL_PauseAudio(0);
-        while(audio_len > 0)//Wait until finish
-            SDL_Delay(1);
-    }
-    return 0;
 }
 
 SDL_AudioFormat AudioPlayer::getAudioFormatFromDataFormat(DataFormat dataFormat)
