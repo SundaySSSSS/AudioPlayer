@@ -49,7 +49,6 @@ typedef struct _AudioInfo
     int32 fs;   //音频采样率
     DataFormat format; //数据格式
     uint8 channels; //通道数   1-单通道 2-双通道
-    std::string filePath;   //文件路径
 }
 AudioInfo;
 
@@ -79,7 +78,8 @@ public:
     void setVolume(int32 volume);
     APRet pushData(const char* data, int32 len);  //向缓存中输入数据
 
-    AudioState getState();
+    AudioState getState();//获取音频播放状态
+    int64 getPlayedLen() { return m_playedLen; }
 
     //将音频回调函数设置为友元
     friend void audio_callback(void *udata, Uint8 *stream, int len);
@@ -89,6 +89,11 @@ private:
     CycleQueue m_dataQueue; //数据队列, 用于存放外界输入的数据
     char* m_pTempBuffer;    //数据缓冲, 在SDL Mix之前临时存放数据
     int32 m_volume; //音量
+
+    /* 播放进度控制 */
+    int64 m_playedLen;    //已经播放的点数
+    //将本次播放的数据传入, 在音频播放回调中使用, 输入参数len为本次播放的长度(bytes)
+    void updatePlayedLen(int64 len);
 
     APRet popData(char* data, int32& len);  //从缓存中取出数据
     SDL_AudioFormat getAudioFormatFromDataFormat(DataFormat dataFormat);

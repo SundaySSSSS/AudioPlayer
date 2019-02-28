@@ -43,6 +43,7 @@ void audio_callback(void *udata, Uint8 *stream, int len)
     int volume = pAp->m_volume;
     //qDebug() << "mix len =" << len;
     SDL_MixAudio(stream, (unsigned char*)pAp->m_pTempBuffer, len, volume);
+    pAp->updatePlayedLen(len);
 }
 
 AudioPlayer::AudioPlayer()
@@ -86,6 +87,7 @@ APRet AudioPlayer::init(AudioPlayerNS::AudioInfo info)
     else
     {
         m_dataQueue.clear();
+        m_playedLen = 0;
         return AP_OK;
     }
 
@@ -174,6 +176,11 @@ AudioState AudioPlayer::getState()
     return ret;
 }
 
+void AudioPlayer::updatePlayedLen(int64 len)
+{
+    m_playedLen += len;
+}
+
 APRet AudioPlayer::popData(char *data, int32 &len)
 {
     m_mutex.lock();
@@ -224,6 +231,5 @@ SDL_AudioFormat AudioPlayer::getAudioFormatFromDataFormat(DataFormat dataFormat)
     }
     return sdl_audioFormat;
 }
-
 
 }

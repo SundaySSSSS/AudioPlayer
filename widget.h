@@ -29,6 +29,10 @@ private slots:
 
     void on_horizontalSlider_Volume_valueChanged(int value);
 
+    //播放进度控制相关
+    void recvPlayedProcess(float rate);
+    void recvPlayFinished();
+
 private:
     Ui::Widget *ui;
     AudioPlayerNS::AudioPlayer m_ap;

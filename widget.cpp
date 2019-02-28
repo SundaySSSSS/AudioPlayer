@@ -3,6 +3,8 @@
 
 extern "C" int testFunc(int a, int b);
 
+#define PLAY_RATE_MAX 100
+
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Widget)
@@ -14,6 +16,12 @@ Widget::Widget(QWidget *parent) :
 
     ui->horizontalSlider_Volume->setRange(0, 128);
     ui->horizontalSlider_Volume->setValue(64);
+
+    ui->horizontalSlider_PlayRate->setRange(0, PLAY_RATE_MAX);
+    ui->horizontalSlider_PlayRate->setValue(0);
+
+    connect(&m_apThread, SIGNAL(sendPlayFileProcess(float)), this, SLOT(recvPlayedProcess(float)));
+    connect(&m_apThread, SIGNAL(sendPlayFinished()), this, SLOT(recvPlayFinished()));
 }
 
 Widget::~Widget()
@@ -28,7 +36,7 @@ void Widget::on_pushButton_Play_clicked()
     fileInfo.fs = 22050;
     fileInfo.channeType = AudioPlayerNS::I_Q;
     fileInfo.dataFormat = AudioPlayerNS::FORMAT_INT16;
-    fileInfo.startReadPos = 0;
+    fileInfo.startReadPos = 16000000;
     fileInfo.stopReadPos = -1;
     m_apThread.init(fileInfo);
     m_apThread.play();
@@ -62,4 +70,19 @@ void Widget::on_pushButton_Stop_clicked()
 void Widget::on_horizontalSlider_Volume_valueChanged(int value)
 {
     m_apThread.setVolume(value);
+}
+
+void Widget::recvPlayedProcess(float rate)
+{
+    int32 value = rate * PLAY_RATE_MAX;
+    ui->horizontalSlider_PlayRate->setValue(value);
+}
+
+void Widget::recvPlayFinished()
+{
+    ui->horizontalSlider_PlayRate->setValue(PLAY_RATE_MAX);
+    m_apThread.stop();
+    ui->pushButton_Play->setEnabled(true);
+    ui->pushButton_Pause->setEnabled(false);
+    ui->pushButton_Stop->setEnabled(false);
 }

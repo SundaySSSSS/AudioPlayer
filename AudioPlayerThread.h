@@ -45,6 +45,11 @@ private:
 
     virtual void run();
 
+    float m_playedRate;
+    //检查文件进度, 适时发送进度信号
+    //返回值: true-已经播放完毕 false-尚未播放完毕
+    bool checkFileProcess();
+
 signals:
     void sendPlayFinished();    //发送播放完毕
     void sendPlayFileProcess(float rate);   //发送文件播放比例

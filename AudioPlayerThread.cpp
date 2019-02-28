@@ -23,7 +23,7 @@ bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
         {
             m_fileInfo.stopReadPos = qFileInfo.size();
         }
-        ret = true;
+
         AudioPlayerNS::AudioInfo audioInfo;
         audioInfo.fs = m_fileInfo.fs;
         audioInfo.format = m_fileInfo.dataFormat;
@@ -35,7 +35,12 @@ bool AudioPlayerThread::init(const AudioFileInfo &fileInfo)
         {
             audioInfo.channels = 2;
         }
-        m_audioPlayer.init(audioInfo);
+        APRet initRet = m_audioPlayer.init(audioInfo);
+        if (initRet == AP_OK)
+        {
+            m_playedRate = 0.0f;
+            ret = true;
+        }
     }
     return ret;
 }
@@ -77,10 +82,12 @@ void AudioPlayerThread::run()
         int32 dataLen = 256 * 1024;
         char* pData = new char[dataLen];
         file.seek(m_fileInfo.startReadPos);
+        emit sendPlayFileProcess(0.0f);
         m_audioPlayer.play();
         while (!file.atEnd() && m_isRunning)
         {
             AudioState state = m_audioPlayer.getState();
+            checkFileProcess();
             if (state == AUDIO_PAUSED)
             {
                 msleep(100);
@@ -105,6 +112,7 @@ void AudioPlayerThread::run()
                 AudioPlayerNS::APRet isPushed = AudioPlayerNS::AP_UNKNOWN_ERR;
                 while (isPushed != AudioPlayerNS::AP_OK && m_isRunning)
                 {
+                    checkFileProcess();
                     isPushed = m_audioPlayer.pushData(pData, realReadLen);
                     if (isPushed != AudioPlayerNS::AP_OK)
                     {
@@ -118,14 +126,41 @@ void AudioPlayerThread::run()
             }
         }
 
+        //文件已经读取完毕, 等待缓冲区清空
+        while (!checkFileProcess())
+        {
+            msleep(50);
+        }
+
         delete[] pData;
         pData = NULL;
 
         file.close();
         m_audioPlayer.destroy();
+        emit sendPlayFileProcess(1.0f);
+        emit sendPlayFinished();
     }
     else
     {
         qDebug() << "open file error";
+    }
+}
+
+bool AudioPlayerThread::checkFileProcess()
+{
+    int64 playedLen = m_audioPlayer.getPlayedLen();
+    int64 totalLen = m_fileInfo.stopReadPos - m_fileInfo.startReadPos;
+    float rate = double(playedLen) / double(totalLen);
+    if (rate - m_playedRate > 0.01f)
+    {
+        emit sendPlayFileProcess(rate);
+    }
+    if (playedLen >= totalLen)
+    {   //已经播放完毕
+        return true;
+    }
+    else
+    {   //尚未播放完毕
+        return false;
     }
 }
