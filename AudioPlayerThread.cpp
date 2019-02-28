@@ -126,8 +126,8 @@ void AudioPlayerThread::run()
             }
         }
 
-        //文件已经读取完毕, 等待缓冲区清空
-        while (!checkFileProcess())
+        //文件已经读取完毕, 等待缓冲区清空. 如果是外界命令停止(m_isRunning == false)则立刻停止
+        while (!checkFileProcess() && m_isRunning)
         {
             msleep(50);
         }

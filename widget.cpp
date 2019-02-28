@@ -1,8 +1,6 @@
 #include "widget.h"
 #include "ui_widget.h"
 
-extern "C" int testFunc(int a, int b);
-
 #define PLAY_RATE_MAX 100
 
 Widget::Widget(QWidget *parent) :
